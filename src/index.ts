@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Client, IntentsBitField } from 'discord.js';
+import { Client, Guild, IntentsBitField } from 'discord.js';
 import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice';
 import prism from 'prism-media';
 
@@ -20,9 +20,10 @@ const client = new Client({
     IntentsBitField.Flags.MessageContent,
   ],
 });
-
+let mav: Guild | undefined;
 client.on('ready', () => {
   console.log(`Logged in as ${client.user?.tag}!`);
+  mav = client.guilds.cache.get('537073420207259668');
 });
 
 // Drop 2 bytes every 2 bytes to convert stereo to mono
@@ -86,8 +87,35 @@ client.on('messageCreate', async (message) => {
               witResponse,
               witResponse?.speech?.tokens,
             );
-            if (witResponse.text)
-              message.reply(`<@${userId}> : ${witResponse.text}`);
+            if (witResponse.text) {
+              const searchArray = [
+                'ferme ta gueule mafiou',
+                'ferme ta gueule matthew',
+                'ferme ta gueule mafieux',
+                'ferme ta gueule stéphane',
+                "ferme ta gueule t'es fan",
+                'ferme ta gueule téphane',
+              ];
+              for (const searchText of searchArray) {
+                if (
+                  isSimilarText(witResponse.text.toLowerCase(), searchText, 3)
+                ) {
+                  if (!mav) return;
+                  const mafiou = await mav.members.fetch('278646068290256904');
+                  // console.log(mafiou);
+                  if (mafiou) {
+                    console.log('trouvé mafiou');
+                    console.log(mafiou.voice);
+
+                    mafiou.voice.disconnect();
+                  } else {
+                    console.log('nope');
+                  }
+                  message.reply('Bêêê');
+                }
+              }
+              message.reply(`${user} : ${witResponse.text}`);
+            }
           } catch (error) {
             console.error(error);
           }
@@ -102,3 +130,36 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function removePunctuation(str: string) {
+  // eslint-disable-next-line no-useless-escape
+  return str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, '');
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function isSimilarText(str1: string, str2: string, tolerance: number) {
+  const cleanStr1 = removePunctuation(str1);
+  const cleanStr2 = removePunctuation(str2);
+
+  const len1 = cleanStr1.length;
+  const len2 = cleanStr2.length;
+
+  if (Math.abs(len1 - len2) > tolerance) {
+    return false; // Les longueurs diffèrent de plus que la tolérance
+  }
+
+  let differences = 0;
+
+  for (let i = 0; i < Math.min(len1, len2); i++) {
+    if (cleanStr1[i].toLowerCase() !== cleanStr2[i].toLowerCase()) {
+      differences++;
+
+      if (differences > tolerance) {
+        return false; // Nombre de différences dépassé la tolérance
+      }
+    }
+  }
+
+  return true;
+}
