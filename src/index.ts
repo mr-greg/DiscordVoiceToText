@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import 'dotenv/config';
 import { Client, Guild, IntentsBitField } from 'discord.js';
 import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice';
@@ -24,6 +26,7 @@ let mav: Guild | undefined;
 client.on('ready', () => {
   console.log(`Logged in as ${client.user?.tag}!`);
   mav = client.guilds.cache.get('537073420207259668');
+  if (!mav) return;
 });
 
 // Drop 2 bytes every 2 bytes to convert stereo to mono
@@ -53,7 +56,7 @@ client.on('messageCreate', async (message) => {
     const collector = message.channel.createMessageCollector({
       filter: (m) => m.content === '!stop',
       max: 1,
-      time: 60000, // Recording will stop after 60 seconds of inactivity
+      time: 2147483647, // Recording will stop after 60 seconds of inactivity
     });
 
     receiver.speaking.on('start', (userId) => {
@@ -87,34 +90,60 @@ client.on('messageCreate', async (message) => {
               witResponse,
               witResponse?.speech?.tokens,
             );
+
+            if (!mav) return;
+            const mafiou = await mav.members.fetch('156432016714366976');
+            const ftefane = await mav.members.fetch('207146898845335552');
+            // Actions associées à chaque phrase
+            interface Actions {
+              [key: string]: (guild: Guild) => Promise<void>;
+            }
+
+            const actions: Actions = {
+              // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+              'ferme ta gueule mafiou': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'ferme ta gueule matthew': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'ferme ta gueule mafieux': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'ferme ta gueule ma fille': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'eh mafiou ferme ta gueule': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'eh matthew ferme ta gueule': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'eh mafieux ferme ta gueule': async (guild: Guild) => {
+                mafiou.voice.disconnect();
+              },
+              'ferme ta gueule stéphane': async (guild: Guild) => {
+                ftefane.voice.disconnect();
+              },
+              "ferme ta gueule t'es fan": async (guild: Guild) => {
+                ftefane.voice.disconnect();
+              },
+              'ferme ta gueule téphane': async (guild: Guild) => {
+                ftefane.voice.disconnect();
+              },
+            };
+
+            // Code principal
             if (witResponse.text) {
-              const searchArray = [
-                'ferme ta gueule mafiou',
-                'ferme ta gueule matthew',
-                'ferme ta gueule mafieux',
-                'ferme ta gueule stéphane',
-                "ferme ta gueule t'es fan",
-                'ferme ta gueule téphane',
-              ];
-              for (const searchText of searchArray) {
+              for (const searchText of Object.keys(actions)) {
                 if (
                   isSimilarText(witResponse.text.toLowerCase(), searchText, 3)
                 ) {
-                  if (!mav) return;
-                  const mafiou = await mav.members.fetch('278646068290256904');
-                  // console.log(mafiou);
-                  if (mafiou) {
-                    console.log('trouvé mafiou');
-                    console.log(mafiou.voice);
-
-                    mafiou.voice.disconnect();
-                  } else {
-                    console.log('nope');
-                  }
-                  message.reply('Bêêê');
+                  const action = actions[searchText];
+                  await action(mav); // Passer la variable appropriée en fonction de l'action
                 }
               }
-              message.reply(`${user} : ${witResponse.text}`);
+              // message.reply(`${user} : ${witResponse.text}`);
             }
           } catch (error) {
             console.error(error);
