@@ -33,31 +33,28 @@ client.on('ready', () => {
 const convertStereoToMono = (stereoData: Buffer): Buffer =>
   Buffer.from(stereoData.filter((_, index) => index % 4 < 2));
 
-client.on('messageCreate', async (message) => {
-  if (!message.guild || message.author.bot || !message.member) return;
-  if (message.content === '!record') {
-    const member = message.member;
-    if (!member.voice.channelId) {
-      message.reply('You must be in a voice channel to use this command!');
-      return;
-    }
+client.on('voiceStateUpdate', (oldMember, newMember) => {
+  if (
+    oldMember.id !== process.env.MAFIOU_ID ||
+    newMember.id !== process.env.MAFIOU_ID
+  )
+    return;
+  let newUserChannel = newMember.channelId;
+  let oldUserChannel = oldMember.channelId;
 
+  if (oldUserChannel != '') {
+    // TODO : close connection here ?
+  }
+
+  if (newUserChannel && newUserChannel != '') {
     const connection = joinVoiceChannel({
-      channelId: member.voice.channelId,
-      guildId: member.guild.id,
-      adapterCreator: member.guild.voiceAdapterCreator,
+      channelId: newUserChannel,
+      guildId: newMember.guild.id,
+      adapterCreator: newMember.guild.voiceAdapterCreator,
       selfDeaf: false,
     });
-
     const receiver = connection.receiver;
-    message.reply('Recording started! Say "!stop" to stop recording.');
-
-    // Check for "!stop" to stop recording
-    const collector = message.channel.createMessageCollector({
-      filter: (m) => m.content === '!stop',
-      max: 1,
-      time: 2147483647, // Recording will stop after 60 seconds of inactivity
-    });
+    newUserChannel = '';
 
     receiver.speaking.on('start', (userId) => {
       const user = client.users.cache.get(userId)?.username ?? userId;
@@ -92,7 +89,7 @@ client.on('messageCreate', async (message) => {
             );
 
             if (!mav) return;
-            const mafiou = await mav.members.fetch('156432016714366976');
+            const mafiou = await mav.members.fetch('278646068290256904');
             const ftefane = await mav.members.fetch('207146898845335552');
             // Actions associées à chaque phrase
             interface Actions {
@@ -149,11 +146,6 @@ client.on('messageCreate', async (message) => {
             console.error(error);
           }
         });
-    });
-
-    collector.on('end', () => {
-      connection.destroy();
-      message.reply('Recording stopped!');
     });
   }
 });
