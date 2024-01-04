@@ -39,12 +39,8 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
     newMember.id !== process.env.MAFIOU_ID
   )
     return;
-  let newUserChannel = newMember.channelId;
-  let oldUserChannel = oldMember.channelId;
-
-  if (oldUserChannel != '') {
-    // TODO : close connection here ?
-  }
+  const newUserChannel = newMember.channelId;
+  const oldUserChannel = oldMember.channelId;
 
   if (newUserChannel && newUserChannel != '') {
     const connection = joinVoiceChannel({
@@ -53,8 +49,12 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
       adapterCreator: newMember.guild.voiceAdapterCreator,
       selfDeaf: false,
     });
+
+    if (newUserChannel === '') {
+      connection.destroy();
+    }
+
     const receiver = connection.receiver;
-    newUserChannel = '';
 
     receiver.speaking.on('start', (userId) => {
       const user = client.users.cache.get(userId)?.username ?? userId;
@@ -89,8 +89,12 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
             );
 
             if (!mav) return;
-            const mafiou = await mav.members.fetch('278646068290256904');
-            const ftefane = await mav.members.fetch('207146898845335552');
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const mafiou = await mav.members.fetch(process.env.MAFIOU_ID);
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            const ftefane = await mav.members.fetch(process.env.FTEFANE_ID);
             // Actions associées à chaque phrase
             interface Actions {
               [key: string]: (guild: Guild) => Promise<void>;
