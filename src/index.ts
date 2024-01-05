@@ -2,13 +2,19 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import 'dotenv/config';
 import { Client, Guild, IntentsBitField } from 'discord.js';
-import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice';
+import {
+  joinVoiceChannel,
+  EndBehaviorType,
+  createAudioPlayer,
+  createAudioResource,
+} from '@discordjs/voice';
 import prism from 'prism-media';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - node-wit's types are not up to date
 import { Wit } from 'node-wit';
 import { Readable } from 'node:stream';
+import path from 'node:path';
 
 if (!process.env.DISCORD_TOKEN) throw new Error('DISCORD_TOKEN is not defined');
 if (!process.env.WIT_AI_TOKEN) throw new Error('WIT_AI_TOKEN is not defined');
@@ -41,6 +47,18 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
     return;
   const newUserChannel = newMember.channelId;
   const oldUserChannel = oldMember.channelId;
+  console.log(`new channel : ${newUserChannel}`);
+  console.log(`old channel : ${oldUserChannel}`);
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { getVoiceConnection } = require('@discordjs/voice');
+
+  if (newUserChannel == null) {
+    console.log('déco');
+    const connection = getVoiceConnection(oldMember.guild.id);
+    connection.disconnect();
+    connection.destroy();
+  }
 
   if (newUserChannel && newUserChannel != '') {
     const connection = joinVoiceChannel({
@@ -49,10 +67,8 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
       adapterCreator: newMember.guild.voiceAdapterCreator,
       selfDeaf: false,
     });
-
-    if (newUserChannel === '') {
-      connection.destroy();
-    }
+    const player = createAudioPlayer();
+    connection.subscribe(player);
 
     const receiver = connection.receiver;
 
@@ -100,6 +116,10 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
               [key: string]: (guild: Guild) => Promise<void>;
             }
 
+            const aboie = createAudioResource(
+              path.resolve(__dirname + '../sounds/aboie.mp3'),
+            );
+
             const actions: Actions = {
               // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
               'ferme ta gueule mafiou': async (guild: Guild) => {
@@ -131,6 +151,27 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
               },
               'ferme ta gueule téphane': async (guild: Guild) => {
                 ftefane.voice.disconnect();
+              },
+              'aboie matthew': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
+              },
+              'aboie mafiou': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+
+                player.play(aboie);
+              },
+              'aboie mafieux': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
+              },
+              'aboa mafiou': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
               },
             };
 
