@@ -7,6 +7,7 @@ import {
   EndBehaviorType,
   createAudioPlayer,
   createAudioResource,
+  getVoiceConnection
 } from '@discordjs/voice';
 import prism from 'prism-media';
 
@@ -15,6 +16,7 @@ import prism from 'prism-media';
 import { Wit } from 'node-wit';
 import { Readable } from 'node:stream';
 import path from 'node:path';
+import { createReadStream } from 'node:fs';
 
 if (!process.env.DISCORD_TOKEN) throw new Error('DISCORD_TOKEN is not defined');
 if (!process.env.WIT_AI_TOKEN) throw new Error('WIT_AI_TOKEN is not defined');
@@ -28,11 +30,9 @@ const client = new Client({
     IntentsBitField.Flags.MessageContent,
   ],
 });
-let mav: Guild | undefined;
+
 client.on('ready', () => {
   console.log(`Logged in as ${client.user?.tag}!`);
-  mav = client.guilds.cache.get('537073420207259668');
-  if (!mav) return;
 });
 
 // Drop 2 bytes every 2 bytes to convert stereo to mono
@@ -40,6 +40,8 @@ const convertStereoToMono = (stereoData: Buffer): Buffer =>
   Buffer.from(stereoData.filter((_, index) => index % 4 < 2));
 
 client.on('voiceStateUpdate', (oldMember, newMember) => {
+  const mav = client.guilds.cache.get(process.env.GUILD_ID);
+  if (!mav) return;
   if (
     oldMember.id !== process.env.MAFIOU_ID ||
     newMember.id !== process.env.MAFIOU_ID
@@ -50,12 +52,11 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
   console.log(`new channel : ${newUserChannel}`);
   console.log(`old channel : ${oldUserChannel}`);
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { getVoiceConnection } = require('@discordjs/voice');
 
   if (newUserChannel == null) {
     console.log('déco');
     const connection = getVoiceConnection(oldMember.guild.id);
+    if (!connection) return;
     connection.disconnect();
     connection.destroy();
   }
@@ -68,7 +69,7 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
       selfDeaf: false,
     });
     const player = createAudioPlayer();
-    connection.subscribe(player);
+
 
     const receiver = connection.receiver;
 
@@ -104,12 +105,7 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
               witResponse?.speech?.tokens,
             );
 
-            if (!mav) return;
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             const mafiou = await mav.members.fetch(process.env.MAFIOU_ID);
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
             const ftefane = await mav.members.fetch(process.env.FTEFANE_ID);
             // Actions associées à chaque phrase
             interface Actions {
@@ -117,7 +113,7 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
             }
 
             const aboie = createAudioResource(
-              path.resolve(__dirname + '../sounds/aboie.mp3'),
+              createReadStream(path.resolve(__dirname + '/../sounds/aboie.mp3'))
             );
 
             const actions: Actions = {
@@ -157,10 +153,10 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
                 console.log(`aboie : ${aboie}`);
                 player.play(aboie);
               },
-              'aboie mafiou': async (guild: Guild) => {
+              'aboie': async (guild: Guild) => {
                 console.log('oe');
-                console.log(`aboie : ${aboie}`);
-
+                const player = createAudioPlayer();
+                connection.subscribe(player);
                 player.play(aboie);
               },
               'aboie mafieux': async (guild: Guild) => {
