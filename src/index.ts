@@ -18,8 +18,9 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { createReadStream } from 'node:fs';
 
-if (!process.env.DISCORD_TOKEN) throw new Error('DISCORD_TOKEN is not defined');
-if (!process.env.WIT_AI_TOKEN) throw new Error('WIT_AI_TOKEN is not defined');
+for (const envVar of ['DISCORD_TOKEN', 'WIT_AI_TOKEN', 'GUILD_ID', 'MAFIOU_ID', 'FTEFANE_ID']) {
+  if (!process.env[envVar]) throw new Error(`${envVar} is not defined`);
+}
 
 const witClient = new Wit({ accessToken: process.env.WIT_AI_TOKEN });
 const client = new Client({
@@ -40,7 +41,7 @@ const convertStereoToMono = (stereoData: Buffer): Buffer =>
   Buffer.from(stereoData.filter((_, index) => index % 4 < 2));
 
 client.on('voiceStateUpdate', (oldMember, newMember) => {
-  const mav = client.guilds.cache.get(process.env.GUILD_ID);
+  const mav = client.guilds.cache.get(process.env.GUILD_ID!);
   if (!mav) return;
   if (
     oldMember.id !== process.env.MAFIOU_ID ||
@@ -105,8 +106,8 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
               witResponse?.speech?.tokens,
             );
 
-            const mafiou = await mav.members.fetch(process.env.MAFIOU_ID);
-            const ftefane = await mav.members.fetch(process.env.FTEFANE_ID);
+            const mafiou = await mav.members.fetch(process.env.MAFIOU_ID!);
+            const ftefane = await mav.members.fetch(process.env.FTEFANE_ID!);
             // Actions associées à chaque phrase
             interface Actions {
               [key: string]: (guild: Guild) => Promise<void>;
