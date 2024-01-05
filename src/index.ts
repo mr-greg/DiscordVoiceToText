@@ -2,16 +2,25 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import 'dotenv/config';
 import { Client, Guild, IntentsBitField } from 'discord.js';
-import { joinVoiceChannel, EndBehaviorType } from '@discordjs/voice';
+import {
+  joinVoiceChannel,
+  EndBehaviorType,
+  createAudioPlayer,
+  createAudioResource,
+  getVoiceConnection
+} from '@discordjs/voice';
 import prism from 'prism-media';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - node-wit's types are not up to date
 import { Wit } from 'node-wit';
 import { Readable } from 'node:stream';
+import path from 'node:path';
+import { createReadStream } from 'node:fs';
 
-if (!process.env.DISCORD_TOKEN) throw new Error('DISCORD_TOKEN is not defined');
-if (!process.env.WIT_AI_TOKEN) throw new Error('WIT_AI_TOKEN is not defined');
+for (const envVar of ['DISCORD_TOKEN', 'WIT_AI_TOKEN', 'GUILD_ID', 'MAFIOU_ID', 'FTEFANE_ID']) {
+  if (!process.env[envVar]) throw new Error(`${envVar} is not defined`);
+}
 
 const witClient = new Wit({ accessToken: process.env.WIT_AI_TOKEN });
 const client = new Client({
@@ -22,42 +31,48 @@ const client = new Client({
     IntentsBitField.Flags.MessageContent,
   ],
 });
-let mav: Guild | undefined;
+
 client.on('ready', () => {
   console.log(`Logged in as ${client.user?.tag}!`);
-  mav = client.guilds.cache.get('537073420207259668');
-  if (!mav) return;
 });
 
 // Drop 2 bytes every 2 bytes to convert stereo to mono
 const convertStereoToMono = (stereoData: Buffer): Buffer =>
   Buffer.from(stereoData.filter((_, index) => index % 4 < 2));
 
-client.on('messageCreate', async (message) => {
-  if (!message.guild || message.author.bot || !message.member) return;
-  if (message.content === '!record') {
-    const member = message.member;
-    if (!member.voice.channelId) {
-      message.reply('You must be in a voice channel to use this command!');
-      return;
-    }
+client.on('voiceStateUpdate', (oldMember, newMember) => {
+  const mav = client.guilds.cache.get(process.env.GUILD_ID!);
+  if (!mav) return;
+  if (
+    oldMember.id !== process.env.MAFIOU_ID ||
+    newMember.id !== process.env.MAFIOU_ID
+  )
+    return;
+  const newUserChannel = newMember.channelId;
+  const oldUserChannel = oldMember.channelId;
+  console.log(`new channel : ${newUserChannel}`);
+  console.log(`old channel : ${oldUserChannel}`);
 
+
+  if (newUserChannel == null) {
+    console.log('déco');
+    const connection = getVoiceConnection(oldMember.guild.id);
+    if (!connection) return;
+    connection.disconnect();
+    connection.destroy();
+  }
+
+  if (newUserChannel && newUserChannel != '') {
     const connection = joinVoiceChannel({
-      channelId: member.voice.channelId,
-      guildId: member.guild.id,
-      adapterCreator: member.guild.voiceAdapterCreator,
+      channelId: newUserChannel,
+      guildId: newMember.guild.id,
+      adapterCreator: newMember.guild.voiceAdapterCreator,
       selfDeaf: false,
     });
+    const player = createAudioPlayer();
+
 
     const receiver = connection.receiver;
-    message.reply('Recording started! Say "!stop" to stop recording.');
-
-    // Check for "!stop" to stop recording
-    const collector = message.channel.createMessageCollector({
-      filter: (m) => m.content === '!stop',
-      max: 1,
-      time: 2147483647, // Recording will stop after 60 seconds of inactivity
-    });
 
     receiver.speaking.on('start', (userId) => {
       const user = client.users.cache.get(userId)?.username ?? userId;
@@ -91,13 +106,16 @@ client.on('messageCreate', async (message) => {
               witResponse?.speech?.tokens,
             );
 
-            if (!mav) return;
-            const mafiou = await mav.members.fetch('156432016714366976');
-            const ftefane = await mav.members.fetch('207146898845335552');
+            const mafiou = await mav.members.fetch(process.env.MAFIOU_ID!);
+            const ftefane = await mav.members.fetch(process.env.FTEFANE_ID!);
             // Actions associées à chaque phrase
             interface Actions {
               [key: string]: (guild: Guild) => Promise<void>;
             }
+
+            const aboie = createAudioResource(
+              createReadStream(path.resolve(__dirname + '/../sounds/aboie.mp3'))
+            );
 
             const actions: Actions = {
               // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -131,6 +149,27 @@ client.on('messageCreate', async (message) => {
               'ferme ta gueule téphane': async (guild: Guild) => {
                 ftefane.voice.disconnect();
               },
+              'aboie matthew': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
+              },
+              'aboie': async (guild: Guild) => {
+                console.log('oe');
+                const player = createAudioPlayer();
+                connection.subscribe(player);
+                player.play(aboie);
+              },
+              'aboie mafieux': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
+              },
+              'aboa mafiou': async (guild: Guild) => {
+                console.log('oe');
+                console.log(`aboie : ${aboie}`);
+                player.play(aboie);
+              },
             };
 
             // Code principal
@@ -149,11 +188,6 @@ client.on('messageCreate', async (message) => {
             console.error(error);
           }
         });
-    });
-
-    collector.on('end', () => {
-      connection.destroy();
-      message.reply('Recording stopped!');
     });
   }
 });
