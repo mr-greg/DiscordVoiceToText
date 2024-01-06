@@ -7,7 +7,7 @@ import {
   EndBehaviorType,
   createAudioPlayer,
   createAudioResource,
-  getVoiceConnection
+  getVoiceConnection,
 } from '@discordjs/voice';
 import prism from 'prism-media';
 
@@ -18,7 +18,13 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { createReadStream } from 'node:fs';
 
-for (const envVar of ['DISCORD_TOKEN', 'WIT_AI_TOKEN', 'GUILD_ID', 'MAFIOU_ID', 'FTEFANE_ID']) {
+for (const envVar of [
+  'DISCORD_TOKEN',
+  'WIT_AI_TOKEN',
+  'GUILD_ID',
+  'MAFIOU_ID',
+  'FTEFANE_ID',
+]) {
   if (!process.env[envVar]) throw new Error(`${envVar} is not defined`);
 }
 
@@ -53,7 +59,6 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
   console.log(`new channel : ${newUserChannel}`);
   console.log(`old channel : ${oldUserChannel}`);
 
-
   if (newUserChannel == null) {
     console.log('déco');
     const connection = getVoiceConnection(oldMember.guild.id);
@@ -69,8 +74,14 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
       adapterCreator: newMember.guild.voiceAdapterCreator,
       selfDeaf: false,
     });
-    const player = createAudioPlayer();
 
+    const content = createAudioResource(
+      createReadStream(path.resolve(__dirname + '/../sounds/content.mp3')),
+    );
+
+    const player = createAudioPlayer();
+    connection.subscribe(player);
+    player.play(content);
 
     const receiver = connection.receiver;
 
@@ -114,7 +125,9 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
             }
 
             const aboie = createAudioResource(
-              createReadStream(path.resolve(__dirname + '/../sounds/aboie.mp3'))
+              createReadStream(
+                path.resolve(__dirname + '/../sounds/aboie.mp3'),
+              ),
             );
 
             const actions: Actions = {
@@ -150,24 +163,24 @@ client.on('voiceStateUpdate', (oldMember, newMember) => {
                 ftefane.voice.disconnect();
               },
               'aboie matthew': async (guild: Guild) => {
-                console.log('oe');
-                console.log(`aboie : ${aboie}`);
+                const player = createAudioPlayer();
+                connection.subscribe(player);
                 player.play(aboie);
               },
-              'aboie': async (guild: Guild) => {
-                console.log('oe');
+              aboie: async (guild: Guild) => {
                 const player = createAudioPlayer();
                 connection.subscribe(player);
                 player.play(aboie);
               },
               'aboie mafieux': async (guild: Guild) => {
-                console.log('oe');
-                console.log(`aboie : ${aboie}`);
+                const player = createAudioPlayer();
+                connection.subscribe(player);
                 player.play(aboie);
               },
               'aboa mafiou': async (guild: Guild) => {
                 console.log('oe');
-                console.log(`aboie : ${aboie}`);
+                const player = createAudioPlayer();
+                connection.subscribe(player);
                 player.play(aboie);
               },
             };
